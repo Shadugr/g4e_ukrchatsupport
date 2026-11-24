@@ -5,23 +5,26 @@ on:
         tags-ignore:
             - t*
             
+permissions:
+    contents: write
+
 jobs:
     build:
         runs-on: windows-latest
         steps:
-            - uses: actions/checkout@v3
+            - uses: actions/checkout@v4
               with:
                   submodules: true
                   fetch-depth: 0
             - name: Setup .NET
-              uses: actions/setup-dotnet@v3
+              uses: actions/setup-dotnet@v4
               with:
-                  dotnet-version: '7.x.x'
+                  dotnet-version: '10.x.x'
             - name: Restore dependencies
               run: dotnet restore
             - name: Download Dalamud
               run: |
-                  Invoke-WebRequest -Uri https://goatcorp.github.io/dalamud-distrib/stg/latest.zip -OutFile latest.zip
+                  Invoke-WebRequest -Uri https://goatcorp.github.io/dalamud-distrib/latest.zip -OutFile latest.zip
                   Expand-Archive -Force latest.zip "$env:AppData\XIVLauncher\addon\Hooks\dev"
             - name: Build
               run: |
@@ -34,33 +37,20 @@ jobs:
                   $content = get-content -path $path
                   $content = $content -replace '1.0.0.0',$ver
                   set-content -Path $path -Value $content
+            - name: Rename release zip
+              run: Copy-Item ./G4EUkrChatSupport/bin/Release/G4EUkrChatSupport/latest.zip ./G4EUkrChatSupport/bin/Release/G4EUkrChatSupport/G4EUkrChatSupport.zip
             - name: Unzip latest file
               run: 7z e ./G4EUkrChatSupport/bin/Release/G4EUkrChatSupport/latest.zip -o"./G4EUkrChatSupport/bin/Release/G4EUkrChatSupport/latest"
             - name: Upload a Build Artifact
-              uses: actions/upload-artifact@v3
+              uses: actions/upload-artifact@v4
               with:
                   path: |
                       ./G4EUkrChatSupport/bin/Release/G4EUkrChatSupport/latest/*
             - name: Create Release
-              id: create_release
-              uses: actions/create-release@v1
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              uses: softprops/action-gh-release@v2
               with:
-                  tag_name: ${{ github.ref }}
-                  release_name: G4EUkrChatSupport ${{ github.ref }}
-                  draft: false
-                  prerelease: false
-            - name: Upload Release Asset
-              id: upload-release-asset
-              uses: actions/upload-release-asset@v1
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              with:
-                  upload_url: ${{ steps.create_release.outputs.upload_url }}
-                  asset_path: ./G4EUkrChatSupport/bin/Release/G4EUkrChatSupport/latest.zip
-                  asset_name: G4EUkrChatSupport.zip
-                  asset_content_type: application/zip
+                  name: G4EUkrChatSupport ${{ github.ref_name }}
+                  files: ./G4EUkrChatSupport/bin/Release/G4EUkrChatSupport/G4EUkrChatSupport.zip
 
             - name: Write out repo.json and G4EUkrChatSupport.csproj
               run: |

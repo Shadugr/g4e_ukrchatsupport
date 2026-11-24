@@ -2,24 +2,24 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Dalamud.Game.Chat;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
-using FFXIVClientStructs.FFXIV.Component.GUI;
+using FFXIVClientStructs.FFXIV.Client.UI;
 using UkrChatSupportPlugin.Sys;
 using UkrChatSupportPlugin.Windows;
 
 namespace UkrChatSupportPlugin;
 
 // ReSharper disable once ClassNeverInstantiated.Global
-public class UkrChatSupport : IDalamudPlugin
+public sealed class UkrChatSupport : IDalamudPlugin
 {
     private int currentThreadId;
-    private uint foregroundThreadId;
-    private IntPtr foregroundWindow;
+    private volatile uint foregroundThreadId;
     private bool isDisposed;
     private volatile bool isHooked;
     private KeyboardHook? keyboardHook;
@@ -27,61 +27,46 @@ public class UkrChatSupport : IDalamudPlugin
     private CancellationTokenSource? stopToken;
 
 #pragma warning disable CS8618
-    /// <summary>
-    /// Plugin setup in Framework thread
-    /// </summary>
-    /// <param name="pluginInterface"></param>
-    /// <param name="chatGui"></param>
-    /// <param name="gameGui"></param>
-    /// <param name="framework"></param>
-    /// <param name="pluginLog"></param>
     public UkrChatSupport(
-        DalamudPluginInterface pluginInterface,
-        IChatGui chatGui, IGameGui gameGui,
-        IFramework framework, IPluginLog pluginLog)
+        IDalamudPluginInterface pluginInterface,
+        IChatGui chatGui,
+        IFramework framework,
+        IPluginLog pluginLog)
     {
         PluginInterface = pluginInterface;
         Framework = framework;
         Chat = chatGui;
-        Game = gameGui;
         PluginLog = pluginLog;
 
         Framework.RunOnFrameworkThread(Setup);
     }
 #pragma warning restore CS8618
 
-    private DalamudPluginInterface PluginInterface { get; init; }
-    private IFramework Framework { get; init; }
-    public IPluginLog PluginLog { get; init; }
-    public IChatGui Chat { get; init; }
-    public IGameGui Game { get; init; }
-    public WindowSystem WindowSystem { get; set; }
-    public Configuration Configuration { get; set; }
+    private IDalamudPluginInterface PluginInterface { get; }
+    private IFramework Framework { get; }
+    public IPluginLog PluginLog { get; }
+    public IChatGui Chat { get; }
+    public WindowSystem WindowSystem { get; private set; }
+    public Configuration Configuration { get; private set; }
     private ConfigWindow ConfigWindow { get; set; }
-    public string Name => "G4E UkrChatSupport";
 
     public void Dispose()
     {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
+        if (isDisposed) return;
+        isDisposed = true;
 
-    private void Dispose(bool isDisposing)
-    {
-        if (!isDisposed)
-        {
-            if (isDisposing)
-            {
-                stopToken?.Cancel();
-                stopToken?.Dispose();
-                Chat.CheckMessageHandled -= ChatOnCheckMessageHandled;
-                StopHook();
-            }
+        stopToken?.Cancel();
+        stopToken?.Dispose();
+        stopToken = null;
 
-            stopToken = null;
-            keyboardHook = null;
-            isDisposed = true;
-        }
+        Chat.CheckMessageHandled -= ChatOnCheckMessageHandled;
+        PluginInterface.UiBuilder.Draw -= DrawUI;
+        PluginInterface.UiBuilder.OpenConfigUi -= DrawConfigUI;
+        PluginInterface.UiBuilder.OpenMainUi -= DrawConfigUI;
+        WindowSystem?.RemoveAllWindows();
+        if (Configuration != null) Configuration.OnConfigChanged -= Handle_ConfigurationOnOnConfigChanged;
+
+        StopHook();
     }
 
     private void Setup()
@@ -90,20 +75,21 @@ public class UkrChatSupport : IDalamudPlugin
         Configuration.Initialize(PluginInterface);
         Configuration.OnConfigChanged += Handle_ConfigurationOnOnConfigChanged;
 
-        WindowSystem = new WindowSystem(typeof(UkrChatSupport).AssemblyQualifiedName);
-        var configWindow = PluginInterface.Create<ConfigWindow>(this);
-        ConfigWindow = configWindow ?? new ConfigWindow(this);
+        WindowSystem = new WindowSystem("G4EUkrChatSupport");
+        ConfigWindow = new ConfigWindow(this);
         WindowSystem.AddWindow(ConfigWindow);
 
         PluginInterface.UiBuilder.Draw += DrawUI;
         PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
-
-        if (Configuration.ReactOnlyToUkLayout || Configuration.ReplaceOnlyOnUkLayout) InitCheckerThread();
+        PluginInterface.UiBuilder.OpenMainUi += DrawConfigUI;
 
         Chat.CheckMessageHandled += ChatOnCheckMessageHandled;
 
         currentThreadId = KeyboardHook.GetCurrentThreadId();
-        StartHook();
+
+        // The foreground window tracker is needed for every mode: it decides whether the game window
+        // is active (input replacement) and which keyboard layout is in use.
+        InitCheckerThread();
     }
 
     private void Handle_ConfigurationOnOnConfigChanged(Configuration configuration)
@@ -111,14 +97,6 @@ public class UkrChatSupport : IDalamudPlugin
 #if DEBUG
         WriteCurrentConfig();
 #endif
-        if (keyboardHook == null) return;
-        if (configuration.ReplaceInput)
-        {
-            keyboardHook.KeyDown -= Handle_keyboardHookOnKeyDown;
-            keyboardHook.KeyDown += Handle_keyboardHookOnKeyDown;
-        }
-        else
-            keyboardHook.KeyDown -= Handle_keyboardHookOnKeyDown;
     }
 
     private void WriteCurrentConfig()
@@ -132,7 +110,8 @@ public class UkrChatSupport : IDalamudPlugin
     {
         try
         {
-            if (!IsInsideFFXIV() ||
+            if (ctrl || alt ||
+                !IsInsideFFXIV() ||
                 !Configuration.ReplaceInput ||
                 !IsTyping() ||
                 (Configuration.ReplaceOnlyOnUkLayout && !IsUkrainianLayout())) return;
@@ -163,22 +142,29 @@ public class UkrChatSupport : IDalamudPlugin
     private void InitCheckerThread()
     {
         stopToken = new CancellationTokenSource();
-        // Checking foreground window
-        var backgroundThread = new Thread(BackgroundWorker)
+        var token = stopToken.Token;
+        var backgroundThread = new Thread(() => BackgroundWorker(token))
         {
             IsBackground = true,
-            Name = "Get foreground window thread"
+            Name = "G4EUkrChatSupport foreground window thread"
         };
         backgroundThread.Start();
     }
 
-    private void ChatOnCheckMessageHandled(
-        XivChatType chatType, uint senderId, ref SeString sender, ref SeString message, ref bool isHandled)
+    private void ChatOnCheckMessageHandled(IHandleableChatMessage chatMessage)
     {
-        if (isHandled || !IsChatTypeSupported(chatType)) return;
-        if (Configuration.ReactOnlyToUkLayout && !IsUkrainianLayout()) return;
+        try
+        {
+            if (chatMessage.IsHandled || !IsChatTypeSupported(chatMessage.LogKind)) return;
+            if (Configuration.ReactOnlyToUkLayout && !IsUkrainianLayout()) return;
 
-        ReplaceSymbols(ref message);
+            var replaced = ReplaceSymbols(chatMessage.Message);
+            if (replaced != null) chatMessage.Message = replaced;
+        }
+        catch (Exception e)
+        {
+            PluginLog.Error(e, e.Message);
+        }
     }
 
     private bool IsUkrainianLayout()
@@ -212,14 +198,14 @@ public class UkrChatSupport : IDalamudPlugin
 
     private bool IsInsideFFXIV()
     {
-        return foregroundThreadId.Equals((uint)currentThreadId);
+        return foregroundThreadId == (uint)currentThreadId;
     }
 
     private void StartHook()
     {
         Framework.RunOnFrameworkThread(() =>
         {
-            if (isHooked || keyboardHook is not null) return;
+            if (isDisposed || isHooked || keyboardHook is not null) return;
             try
             {
                 keyboardHook = new KeyboardHook(true);
@@ -244,59 +230,52 @@ public class UkrChatSupport : IDalamudPlugin
                 keyboardHook.KeyDown -= Handle_keyboardHookOnKeyDown;
                 keyboardHook.OnError -= Handle_keyboardHook_OnError;
                 keyboardHook.Dispose();
-                keyboardHook = null;
-                isHooked = false;
             }
             catch (Exception e)
             {
                 PluginLog.Error(e, e.Message);
             }
+            finally
+            {
+                keyboardHook = null;
+                isHooked = false;
+            }
         });
     }
 
-    private void ReplaceSymbols(ref SeString message)
+    /// <returns>A new message with replaced symbols, or null if nothing had to be replaced.</returns>
+    private static SeString? ReplaceSymbols(SeString message)
     {
-        try
+        var changed = false;
+        var payloads = message.Payloads.Select(payload =>
         {
-            // ReSharper disable once PossibleInvalidCastExceptionInForeachLoop
-            foreach (TextPayload textPayload in message.Payloads.Where(p => p is TextPayload))
-            {
-                var input = textPayload.Text;
-                if (string.IsNullOrWhiteSpace(input)) continue;
+            if (payload is not TextPayload { Text: { } input } || string.IsNullOrWhiteSpace(input)) return payload;
 
-                var output = input
-                             .Replace("і", "i")       // \u0456 to \u0069
-                             .Replace("І", "I")       // \u0406 to \u0073
-                             .Replace("ї", "ï")       // \u1111 to \u00EF
-                             .Replace("Ї", "Ï")       // \u1031 to \u00CF
-                             .Replace("є", "\u2208")  // \u0454 to \u2208
-                             .Replace("Є", "\u2208"); // \u0404 to \u2208
+            var output = input
+                         .Replace("і", "i")       // \u0456 to \u0069
+                         .Replace("І", "I")       // \u0406 to \u0049
+                         .Replace("ї", "ï")       // \u0457 to \u00EF
+                         .Replace("Ї", "Ï")       // \u0407 to \u00CF
+                         .Replace("є", "\u2208")  // \u0454 to \u2208
+                         .Replace("Є", "\u2208"); // \u0404 to \u2208
 
-                textPayload.Text = output;
-            }
-        }
-        catch (Exception e)
-        {
-            PluginLog.Debug(e, $"Failed to replace symbols for: {message}");
-            PluginLog.Error(e, e.Message);
-        }
+            if (output == input) return payload;
+            changed = true;
+            return new TextPayload(output);
+        }).ToList();
+
+        return changed ? new SeString(payloads) : null;
     }
 
-    private unsafe bool IsTyping()
+    private static unsafe bool IsTyping()
     {
-        var chatLog = (AtkUnitBase*)Game.GetAddonByName("ChatLog");
-
-        if (!chatLog->IsVisible) return false;
-
-        var textInput = chatLog->UldManager.NodeList[15];
-        var chatCursor = textInput->GetAsAtkComponentNode()->Component->UldManager.NodeList[14];
-
-        return chatCursor->IsVisible;
+        var atkModule = RaptureAtkModule.Instance();
+        return atkModule != null && atkModule->IsTextInputActive();
     }
 
     private void GetForeground()
     {
-        foregroundWindow = NativeMethods.GetForegroundWindow();
+        var foregroundWindow = NativeMethods.GetForegroundWindow();
         foregroundThreadId = NativeMethods.GetWindowThreadProcessId(foregroundWindow, nint.Zero);
         if (IsInsideFFXIV())
             StartHook();
@@ -304,22 +283,18 @@ public class UkrChatSupport : IDalamudPlugin
             StopHook();
     }
 
-    private void BackgroundWorker()
+    private void BackgroundWorker(CancellationToken token)
     {
         try
         {
-            GetForeground();
-            while (stopToken?.IsCancellationRequested == false)
+            while (!token.IsCancellationRequested)
             {
-                Task.Delay(1000, stopToken.Token).Wait();
                 GetForeground();
+                Task.Delay(1000, token).Wait(token);
             }
         }
-        catch (TaskCanceledException) { }
-        catch (AggregateException ae)
-        {
-            if (ae.InnerException is not TaskCanceledException) throw;
-        }
+        catch (OperationCanceledException) { }
+        catch (AggregateException ae) when (ae.InnerException is OperationCanceledException) { }
         catch (Exception e)
         {
             PluginLog.Error(e, e.Message);
@@ -334,10 +309,5 @@ public class UkrChatSupport : IDalamudPlugin
     public void DrawConfigUI()
     {
         ConfigWindow.Toggle();
-    }
-
-    ~UkrChatSupport()
-    {
-        Dispose(false);
     }
 }

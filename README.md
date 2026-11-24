@@ -3,7 +3,7 @@
 # `G4E Ukrainian Chat Support Plugin`
 
 [![logo](images/icon.png)](https://gaming4eternity.online)  
-[![Завантажено](https://img.shields.io/github/downloads/justscribe/g4e_ukrchatsupport/total)](https://github.com/justscribe/g4e_ukrchatsupport)
+[![Завантажено](https://img.shields.io/github/downloads/Shadugr/g4e_ukrchatsupport/total)](https://github.com/Shadugr/g4e_ukrchatsupport)
 
 ### === УКРАЇНСЬКОЮ ===
 Dalamud плагін для коректного (наскільки дозволяє гра) відображення українських символів у вікні чату гри.  
@@ -26,7 +26,7 @@ Dalamud плагін для коректного (наскільки дозво�
 
 ###### Є 2 варіанти:
 1. Встановити зі списку плагінів - [детальна інструкція](https://kutok.io/g4eukrchatsupport/yak_vstanovyty_plahin_-hbi).
-2. Або використайте лінк на вкладці "Experimental" в Dalamud - https://raw.githubusercontent.com/justscribe/g4e_ukrchatsupport/master/repo.json для отримання самих останніх релізів дуже швидко.
+2. Або використайте лінк на вкладці "Experimental" в Dalamud - https://raw.githubusercontent.com/Shadugr/g4e_ukrchatsupport/master/repo.json для отримання самих останніх релізів дуже швидко.
 
 ### === IN ENGLISH ===
 A Dalamud plugin to correctly (as far as the game allows) show ukrainian symbols in game chat window.
@@ -47,7 +47,7 @@ A Dalamud plugin to correctly (as far as the game allows) show ukrainian symbols
 
 ###### There are 2 ways:
 1. Install from the list of test plugins.
-2. Or use the link on Dalamud "Experimental" tab - https://raw.githubusercontent.com/justscribe/g4e_ukrchatsupport/master/repo.json to receive latest releases faster.
+2. Or use the link on Dalamud "Experimental" tab - https://raw.githubusercontent.com/Shadugr/g4e_ukrchatsupport/master/repo.json to receive latest releases faster.
 
 #### **Info**
 

@@ -5,7 +5,7 @@
     "Description": "Support for ukrainian characters in text chat and input field.",
     "InternalName": "G4EUkrChatSupport",
     "ApplicableVersion": "any",
-    "RepoUrl": "https://github.com/justscribe/g4e_ukrchatsupport",
+    "RepoUrl": "https://github.com/Shadugr/g4e_ukrchatsupport",
     "Tags": [
         "chat",
         "ukr",
