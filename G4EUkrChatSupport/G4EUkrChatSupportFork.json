@@ -1,9 +1,9 @@
 {
     "Author": "justscribe",
-    "Name": "G4E UkrChatSupport",
+    "Name": "G4E UkrChatSupport (Fork)",
     "Punchline": "Support for ukrainian characters.",
     "Description": "Support for ukrainian characters in text chat and input field.",
-    "InternalName": "G4EUkrChatSupport",
+    "InternalName": "G4EUkrChatSupportFork",
     "ApplicableVersion": "any",
     "RepoUrl": "https://github.com/Shadugr/g4e_ukrchatsupport",
     "Tags": [

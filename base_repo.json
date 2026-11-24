@@ -1,9 +1,9 @@
 [
     {
         "Author": "justscribe",
-        "Name": "G4EUkrChatSupport",
+        "Name": "G4E UkrChatSupport (Fork)",
         "Description": "Support for ukrainian characters in text chat and input field.",
-        "InternalName": "G4EUkrChatSupport",
+        "InternalName": "G4EUkrChatSupportFork",
         "AssemblyVersion": "1.0.0.0",
         "TestingAssemblyVersion": "1.0.0.0",
         "RepoUrl": "https://github.com/Shadugr/g4e_ukrchatsupport",
@@ -16,9 +16,9 @@
         "LoadPriority": 69420,
         "LoadRequiredState": 2,
         "LoadSync": true,
-        "DownloadLinkInstall": "https://github.com/Shadugr/g4e_ukrchatsupport/releases/download/1.0.0.0/G4EUkrChatSupport.zip",
-        "DownloadLinkTesting": "https://github.com/Shadugr/g4e_ukrchatsupport/releases/download/1.0.0.0/G4EUkrChatSupport.zip",
-        "DownloadLinkUpdate": "https://github.com/Shadugr/g4e_ukrchatsupport/releases/download/1.0.0.0/G4EUkrChatSupport.zip",
+        "DownloadLinkInstall": "https://github.com/Shadugr/g4e_ukrchatsupport/releases/download/1.0.0.0/G4EUkrChatSupportFork.zip",
+        "DownloadLinkTesting": "https://github.com/Shadugr/g4e_ukrchatsupport/releases/download/1.0.0.0/G4EUkrChatSupportFork.zip",
+        "DownloadLinkUpdate": "https://github.com/Shadugr/g4e_ukrchatsupport/releases/download/1.0.0.0/G4EUkrChatSupportFork.zip",
         "IconUrl": "https://raw.githubusercontent.com/Shadugr/g4e_ukrchatsupport/master/images/icon.png"
     }
 ]

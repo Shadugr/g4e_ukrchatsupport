@@ -33,24 +33,24 @@ jobs:
             - name: write version into json
               run: |
                   $ver = '${{ github.ref }}' -replace 'refs/tags/',''
-                  $path = './G4EUkrChatSupport/bin/Release/G4EUkrChatSupport.json'
+                  $path = './G4EUkrChatSupport/bin/Release/G4EUkrChatSupportFork.json'
                   $content = get-content -path $path
                   $content = $content -replace '1.0.0.0',$ver
                   set-content -Path $path -Value $content
             - name: Rename release zip
-              run: Copy-Item ./G4EUkrChatSupport/bin/Release/G4EUkrChatSupport/latest.zip ./G4EUkrChatSupport/bin/Release/G4EUkrChatSupport/G4EUkrChatSupport.zip
+              run: Copy-Item ./G4EUkrChatSupport/bin/Release/G4EUkrChatSupportFork/latest.zip ./G4EUkrChatSupport/bin/Release/G4EUkrChatSupportFork/G4EUkrChatSupportFork.zip
             - name: Unzip latest file
-              run: 7z e ./G4EUkrChatSupport/bin/Release/G4EUkrChatSupport/latest.zip -o"./G4EUkrChatSupport/bin/Release/G4EUkrChatSupport/latest"
+              run: 7z e ./G4EUkrChatSupport/bin/Release/G4EUkrChatSupportFork/latest.zip -o"./G4EUkrChatSupport/bin/Release/G4EUkrChatSupportFork/latest"
             - name: Upload a Build Artifact
               uses: actions/upload-artifact@v4
               with:
                   path: |
-                      ./G4EUkrChatSupport/bin/Release/G4EUkrChatSupport/latest/*
+                      ./G4EUkrChatSupport/bin/Release/G4EUkrChatSupportFork/latest/*
             - name: Create Release
               uses: softprops/action-gh-release@v2
               with:
                   name: G4EUkrChatSupport ${{ github.ref_name }}
-                  files: ./G4EUkrChatSupport/bin/Release/G4EUkrChatSupport/G4EUkrChatSupport.zip
+                  files: ./G4EUkrChatSupport/bin/Release/G4EUkrChatSupportFork/G4EUkrChatSupportFork.zip
 
             - name: Write out repo.json and G4EUkrChatSupport.csproj
               run: |

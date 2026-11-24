@@ -27,9 +27,9 @@ jobs:
               run: |
                   dotnet build --no-restore --configuration Release --nologo
             - name: Unzip latest file
-              run: 7z e ./G4EUkrChatSupport/bin/Release/G4EUkrChatSupport/latest.zip -o"./G4EUkrChatSupport/bin/Release/G4EUkrChatSupport/latest"
+              run: 7z e ./G4EUkrChatSupport/bin/Release/G4EUkrChatSupportFork/latest.zip -o"./G4EUkrChatSupport/bin/Release/G4EUkrChatSupportFork/latest"
             - name: Upload a Build Artifact
               uses: actions/upload-artifact@v4
               with:
                   path: |
-                      ./G4EUkrChatSupport/bin/Release/G4EUkrChatSupport/latest/*
+                      ./G4EUkrChatSupport/bin/Release/G4EUkrChatSupportFork/latest/*
